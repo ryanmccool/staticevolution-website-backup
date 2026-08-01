@@ -6,5 +6,12 @@
       "source": "Static Evolution",
       "source_url": "https://staticevolution.com/"
     }
+  },
+  "plugins": {
+    "datasette-auth-passwords": {
+      "root_password_hash": {
+        "$env": "DATASETTE_ADMIN_PASSWORD_HASH"
+      }
+    }
   }
 }
