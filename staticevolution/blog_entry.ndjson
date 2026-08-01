@@ -1,0 +1,1 @@
+[4, "2026-07-23 17:50:34.231648+00:00", "obsidian-publishing-test", null, null, "Obsidian publishing test", "\nThis is a test post published from Obsidian to Static Evolution.\n\nIt includes **Markdown** and tags.\nThe current production deployment still needs the new multipart publishing API deployed before the plugin can publish this note.\n\n", null, null]

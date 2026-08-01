@@ -1,0 +1,15 @@
+{
+    "name": "blog_entry",
+    "columns": [
+        "id",
+        "created",
+        "slug",
+        "card_image",
+        "series_id",
+        "title",
+        "body",
+        "tweet_html",
+        "extra_head_html"
+    ],
+    "schema": "CREATE TABLE [blog_entry] (\n   [id] INTEGER PRIMARY KEY,\n   [created] TEXT,\n   [slug] TEXT,\n   [card_image] TEXT,\n   [series_id] TEXT,\n   [title] TEXT,\n   [body] TEXT,\n   [tweet_html] TEXT,\n   [extra_head_html] TEXT\n)"
+}

@@ -1,0 +1,16 @@
+{
+    "name": "products_product",
+    "columns": [
+        "id",
+        "name",
+        "slug",
+        "summary",
+        "body",
+        "platform_links",
+        "support_url",
+        "featured",
+        "redirect_to_id",
+        "meta_description"
+    ],
+    "schema": "CREATE TABLE [products_product] (\n   [id] INTEGER PRIMARY KEY,\n   [name] TEXT,\n   [slug] TEXT,\n   [summary] TEXT,\n   [body] TEXT,\n   [platform_links] TEXT,\n   [support_url] TEXT,\n   [featured] INTEGER,\n   [redirect_to_id] TEXT,\n   [meta_description] TEXT\n)"
+}
