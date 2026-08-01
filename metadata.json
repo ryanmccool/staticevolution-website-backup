@@ -1,0 +1,10 @@
+{
+  "title": "Static Evolution public data",
+  "description": "A read-only public mirror of published content from staticevolution.com",
+  "databases": {
+    "staticevolution": {
+      "source": "Static Evolution",
+      "source_url": "https://staticevolution.com/"
+    }
+  }
+}

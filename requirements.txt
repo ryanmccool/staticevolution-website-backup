@@ -1,0 +1,4 @@
+datasette==0.65.2
+psycopg[binary]==3.2.10
+sqlite-diffable==0.6
+sqlite-utils==3.39

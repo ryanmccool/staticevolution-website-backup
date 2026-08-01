@@ -1,0 +1,36 @@
+name: Refresh public data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "26 */2 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --requirement requirements.txt
+      - name: Export published rows
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python export.py
+      - name: Build deterministic source snapshot
+        run: |
+          rm -f staticevolution/*
+          sqlite-diffable dump staticevolution.db staticevolution --all
+      - name: Commit changed public data
+        run: |
+          git config user.name "Static Evolution backup"
+          git config user.email "actions@users.noreply.github.com"
+          git add staticevolution
+          git diff --cached --quiet && exit 0
+          git commit -m "Refresh public data"
+          git push

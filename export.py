@@ -1,0 +1,78 @@
+import json
+import os
+from datetime import date, datetime
+from decimal import Decimal
+from pathlib import Path
+
+import psycopg
+from psycopg.rows import dict_row
+from sqlite_utils import Database
+
+OUTPUT = Path("staticevolution.db")
+PUBLIC_NOW = "created <= now()"
+PUBLIC_TAG_IDS = """
+SELECT x.tag_id FROM blog_entry_tags x JOIN blog_entry p ON p.id = x.entry_id
+WHERE NOT p.is_draft AND p.created <= now()
+UNION SELECT x.tag_id FROM blog_blogmark_tags x JOIN blog_blogmark p ON p.id = x.blogmark_id
+WHERE NOT p.is_draft AND p.created <= now()
+UNION SELECT x.tag_id FROM blog_quotation_tags x JOIN blog_quotation p ON p.id = x.quotation_id
+WHERE NOT p.is_draft AND p.created <= now()
+UNION SELECT x.tag_id FROM blog_note_tags x JOIN blog_note p ON p.id = x.note_id
+WHERE NOT p.is_draft AND p.created <= now()
+UNION SELECT x.tag_id FROM guides_chapter_tags x
+JOIN guides_chapter c ON c.id = x.chapter_id JOIN guides_guide g ON g.id = c.guide_id
+WHERE NOT c.is_draft AND NOT c.is_unlisted AND NOT g.is_draft AND c.created <= now()
+"""
+TABLES = {
+    "blog_entry": f"SELECT * FROM blog_entry WHERE NOT is_draft AND {PUBLIC_NOW}",
+    "blog_blogmark": f"SELECT * FROM blog_blogmark WHERE NOT is_draft AND {PUBLIC_NOW}",
+    "blog_quotation": f"SELECT * FROM blog_quotation WHERE NOT is_draft AND {PUBLIC_NOW}",
+    "blog_note": f"SELECT * FROM blog_note WHERE NOT is_draft AND {PUBLIC_NOW}",
+    "blog_liveupdate": "SELECT u.* FROM blog_liveupdate u JOIN blog_entry e ON e.id = u.entry_id WHERE NOT e.is_draft AND e.created <= now()",
+    "blog_series": "SELECT s.* FROM blog_series s WHERE EXISTS (SELECT 1 FROM blog_entry e WHERE e.series_id = s.id AND NOT e.is_draft AND e.created <= now())",
+    "blog_photo": f"SELECT * FROM blog_photo WHERE NOT is_draft AND {PUBLIC_NOW}",
+    "blog_photoset": "SELECT * FROM blog_photoset WHERE NOT is_draft",
+    "guides_guide": "SELECT * FROM guides_guide WHERE NOT is_draft",
+    "guides_guidesection": "SELECT s.* FROM guides_guidesection s JOIN guides_guide g ON g.id = s.guide_id WHERE NOT g.is_draft",
+    "guides_chapter": "SELECT c.* FROM guides_chapter c JOIN guides_guide g ON g.id = c.guide_id WHERE NOT c.is_draft AND NOT c.is_unlisted AND NOT g.is_draft AND c.created <= now()",
+    "guides_chapterchange": "SELECT h.* FROM guides_chapterchange h JOIN guides_chapter c ON c.id = h.chapter_id JOIN guides_guide g ON g.id = c.guide_id WHERE NOT h.is_draft AND NOT c.is_draft AND NOT c.is_unlisted AND NOT g.is_draft",
+    "pages_page": "SELECT * FROM pages_page WHERE status = 'published' AND slug IN ('consulting', 'about', 'contact', 'privacy', 'terms', 'support')",
+    "products_product": "SELECT * FROM products_product WHERE status = 'published'",
+    "blog_entry_tags": "SELECT x.* FROM blog_entry_tags x JOIN blog_entry p ON p.id = x.entry_id WHERE NOT p.is_draft AND p.created <= now()",
+    "blog_blogmark_tags": "SELECT x.* FROM blog_blogmark_tags x JOIN blog_blogmark p ON p.id = x.blogmark_id WHERE NOT p.is_draft AND p.created <= now()",
+    "blog_quotation_tags": "SELECT x.* FROM blog_quotation_tags x JOIN blog_quotation p ON p.id = x.quotation_id WHERE NOT p.is_draft AND p.created <= now()",
+    "blog_note_tags": "SELECT x.* FROM blog_note_tags x JOIN blog_note p ON p.id = x.note_id WHERE NOT p.is_draft AND p.created <= now()",
+    "guides_chapter_tags": "SELECT x.* FROM guides_chapter_tags x JOIN guides_chapter c ON c.id = x.chapter_id JOIN guides_guide g ON g.id = c.guide_id WHERE NOT c.is_draft AND NOT c.is_unlisted AND NOT g.is_draft AND c.created <= now()",
+    "blog_photoset_photos": "SELECT x.* FROM blog_photoset_photos x JOIN blog_photoset s ON s.id = x.photoset_id JOIN blog_photo p ON p.id = x.photo_id WHERE NOT s.is_draft AND NOT p.is_draft AND p.created <= now()",
+    "blog_tag": f"SELECT t.* FROM blog_tag t WHERE t.id IN ({PUBLIC_TAG_IDS})",
+    "blog_previoustagname": f"SELECT p.* FROM blog_previoustagname p WHERE p.tag_id IN ({PUBLIC_TAG_IDS})",
+}
+
+
+def normalize(value):
+    if isinstance(value, (date, datetime, Decimal)):
+        return str(value)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+    if isinstance(value, memoryview):
+        return bytes(value)
+    return value
+
+
+def main():
+    database_url = os.environ["DATABASE_URL"]
+    OUTPUT.unlink(missing_ok=True)
+    destination = Database(OUTPUT)
+    with psycopg.connect(database_url, row_factory=dict_row) as connection:
+        for table, query in TABLES.items():
+            rows = [
+                {key: normalize(value) for key, value in row.items()}
+                for row in connection.execute(query)
+            ]
+            if rows:
+                destination[table].insert_all(rows, pk="id", replace=True)
+    destination.vacuum()
+
+
+if __name__ == "__main__":
+    main()
